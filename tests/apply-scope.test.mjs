@@ -131,7 +131,12 @@ test('allowed roots are this checkout and the configured data root only', async 
 });
 
 test('freshLaunchOptions starts a new browser and refuses an attached one', async () => {
-  const { freshLaunchOptions, ApplyScopeError, HEADED_APPLY_LAUNCH } = await import('../apply-scope.mjs');
+  const {
+    freshLaunchOptions,
+    defaultLaunchOptions,
+    ApplyScopeError,
+    HEADED_APPLY_LAUNCH,
+  } = await import('../apply-scope.mjs');
   const fresh = freshLaunchOptions({ headless: false });
   assert.deepEqual(fresh, { headless: false });
   assert.equal(JSON.stringify(fresh).includes('remote-debugging'), false);
@@ -153,6 +158,17 @@ test('freshLaunchOptions starts a new browser and refuses an attached one', asyn
   assert.equal(HEADED_APPLY_LAUNCH.headless, false);
   assert.equal(JSON.stringify(HEADED_APPLY_LAUNCH).includes('remote-debugging'), false);
   assert.equal(Object.hasOwn(HEADED_APPLY_LAUNCH, 'userDataDir'), false);
+
+  const brave = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
+  const resolved = defaultLaunchOptions({
+    platform: 'darwin',
+    projectRoot: ROOT,
+    processEnv: { CAREER_OPS_BROWSER_AUTODETECT: 'true' },
+    pathExists: path => path === brave,
+  });
+  assert.deepEqual(resolved, { headless: false, executablePath: brave });
+  assert.equal(JSON.stringify(resolved).includes('remote-debugging'), false);
+  assert.equal(Object.hasOwn(resolved, 'userDataDir'), false);
 });
 
 test('locateApplyReport reads a report inside the data root and refuses another install', async () => {
@@ -282,6 +298,11 @@ test('check-path and launch-options stay inside the project browser', () => {
 
   const launch = spawnSync(NODE, [join(ROOT, 'apply-scope.mjs'), 'launch-options'], {
     cwd: ROOT,
+    env: {
+      ...process.env,
+      CAREER_OPS_BROWSER_AUTODETECT: '',
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: '',
+    },
     encoding: 'utf8',
   });
   assert.equal(launch.status, 0, describeSpawn(launch));

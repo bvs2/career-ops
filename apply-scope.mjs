@@ -2,6 +2,7 @@ import { realpathSync } from 'node:fs';
 import { isAbsolute, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getCareerOpsRoot } from './path-resolver.mjs';
+import { resolveBrowserExecutable } from './lib/browser-launch.mjs';
 import { isMainModule } from './lib/is-main-module.mjs';
 import { pathIsInsideCanonical } from './tracker-utils.mjs';
 
@@ -93,8 +94,13 @@ export const BUNDLED_HEADED_LAUNCH = freshLaunchOptions({
   args: ['--window-position=-3200,-3200', '--window-size=1280,940'],
 });
 
-export function defaultLaunchOptions() {
-  return freshLaunchOptions({ headless: false });
+export function defaultLaunchOptions(probe = {}) {
+  const fresh = freshLaunchOptions({ headless: false });
+  const resolved = resolveBrowserExecutable(probe);
+  // The executable path can only come from Career Ops' own resolver. Keep
+  // freshLaunchOptions() closed to caller-supplied executablePath values so an
+  // Apply run still cannot attach to or repurpose an arbitrary browser session.
+  return resolved ? { ...fresh, executablePath: resolved.path } : fresh;
 }
 
 export function locateApplyReport(dataRoot, ref, io) {
